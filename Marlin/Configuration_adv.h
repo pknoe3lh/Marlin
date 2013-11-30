@@ -86,7 +86,7 @@
 //=============================Mechanical Settings===========================
 //===========================================================================
 
-#define ENDSTOPS_ONLY_FOR_HOMING // If defined the endstops will only be used for homing
+//#define ENDSTOPS_ONLY_FOR_HOMING // If defined the endstops will only be used for homing
 
 
 //// AUTOSET LOCATIONS OF LIMIT SWITCHES
@@ -299,7 +299,7 @@
 // does not respect endstops!
 //#define BABYSTEPPING
 #ifdef BABYSTEPPING
-  #define BABYSTEP_XY  //not only z, but also XY in the menu. more clutter, more functions
+  //#define BABYSTEP_XY  //not only z, but also XY in the menu. more clutter, more functions
   #define BABYSTEP_INVERT_Z false  //true for inverse movements in Z
   #define BABYSTEP_Z_MULTIPLICATOR 2 //faster z movements
   

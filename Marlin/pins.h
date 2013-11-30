@@ -453,8 +453,8 @@
     #define Z_STEP_PIN         46
     #define Z_DIR_PIN          48
     #define Z_ENABLE_PIN       62
-    #define Z_MIN_PIN          18
-    #define Z_MAX_PIN          19
+    #define Z_MIN_PIN          19
+    #define Z_MAX_PIN          18
 
     #define Y2_STEP_PIN        36
     #define Y2_DIR_PIN         34
@@ -562,12 +562,22 @@
   #ifdef ULTRA_LCD
 
     #ifdef NEWPANEL
+/*
       #define LCD_PINS_RS 16 
       #define LCD_PINS_ENABLE 17
       #define LCD_PINS_D4 23
       #define LCD_PINS_D5 25 
       #define LCD_PINS_D6 27
       #define LCD_PINS_D7 29
+*/
+      #define LCD_PINS_RS 32 
+      #define LCD_PINS_ENABLE 45
+      #define LCD_PINS_D4 43
+      #define LCD_PINS_D5 41 
+      #define LCD_PINS_D6 39
+      #define LCD_PINS_D7 37
+      
+      
 
       #ifdef REPRAP_DISCOUNT_SMART_CONTROLLER
         #define BEEPER 37
@@ -2355,3 +2365,13 @@
                         analogInputToDigitalPin(TEMP_0_PIN), analogInputToDigitalPin(TEMP_1_PIN), analogInputToDigitalPin(TEMP_2_PIN), analogInputToDigitalPin(TEMP_BED_PIN) }
 #endif
 
+
+//Numberbad
+#define MP_C0 27
+#define MP_C1 25
+#define MP_C2 23
+#define MP_C3 17
+#define MP_R0 35
+#define MP_R1 33
+#define MP_R2 31
+#define MP_R3 29
