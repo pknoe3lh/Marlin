@@ -1,4 +1,12 @@
 ==========================
+Modification
+==========================
+I have two 3d Printer and one milling machine and i use the same electronic for all of them. So i modified Marlin to have a switch for different configurations 
+
+One Machine is also a delta printer so i can also change the type of axes ;-) 
+
+
+==========================
 Marlin 3D Printer Firmware
 ==========================
 Marlin has a GPL license because I believe in open development.
