@@ -90,8 +90,12 @@ static void menu_action_setting_edit_callback_long5(const char* pstr, unsigned l
 #define ENCODER_FEEDRATE_DEADZONE 10
 
 #if !defined(LCD_I2C_VIKI)
-  #define ENCODER_STEPS_PER_MENU_ITEM 5
-  #ifndef ENCODER_PULSES_PER_STEP
+  #ifdef ENCODER_HASE_NULL_POS
+    #define ENCODER_STEPS_PER_MENU_ITEM 1
+  #else
+    #define ENCODER_STEPS_PER_MENU_ITEM 5
+  #endif
+  #ifndef ENCODER_PULSES_PER_STEP 
     #define ENCODER_PULSES_PER_STEP 1
   #endif
 #else
@@ -103,9 +107,10 @@ static void menu_action_setting_edit_callback_long5(const char* pstr, unsigned l
 
 
 /* Helper macros for menus */
-#define START_MENU() do { \
-    if (encoderPosition > 0x8000) encoderPosition = 0; \
-    if (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM < currentMenuViewOffset) currentMenuViewOffset = encoderPosition / ENCODER_STEPS_PER_MENU_ITEM;\
+#define START_MENU() do { \  
+    int8_t tencoderPosition=-encoderPosition;  \
+    if (tencoderPosition > 0x8000) tencoderPosition = 0; \
+    if (tencoderPosition / ENCODER_STEPS_PER_MENU_ITEM < currentMenuViewOffset) currentMenuViewOffset = tencoderPosition / ENCODER_STEPS_PER_MENU_ITEM;\
     uint8_t _lineNr = currentMenuViewOffset, _menuItemNr; \
     bool wasClicked = LCD_CLICKED;\
     for(uint8_t _drawLineNr = 0; _drawLineNr < LCD_HEIGHT; _drawLineNr++, _lineNr++) { \
@@ -114,31 +119,35 @@ static void menu_action_setting_edit_callback_long5(const char* pstr, unsigned l
     if (_menuItemNr == _lineNr) { \
         if (lcdDrawUpdate) { \
             const char* _label_pstr = PSTR(label); \
-            if ((encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) { \
+            if ((tencoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) { \
                 lcd_implementation_drawmenu_ ## type ## _selected (_drawLineNr, _label_pstr , ## args ); \
             }else{\
                 lcd_implementation_drawmenu_ ## type (_drawLineNr, _label_pstr , ## args ); \
             }\
         }\
-        if (wasClicked && (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) {\
+        if (wasClicked && (tencoderPosition / ENCODER_STEPS_PER_MENU_ITEM) == _menuItemNr) {\
             lcd_quick_feedback(); \
             menu_action_ ## type ( args ); \
             return;\
-        }\
+        }\ 
     }\
     _menuItemNr++;\
-} while(0)
+} while(0) 
 #define MENU_ITEM_DUMMY() do { _menuItemNr++; } while(0)
 #define MENU_ITEM_EDIT(type, label, args...) MENU_ITEM(setting_edit_ ## type, label, PSTR(label) , ## args )
 #define MENU_ITEM_EDIT_CALLBACK(type, label, args...) MENU_ITEM(setting_edit_callback_ ## type, label, PSTR(label) , ## args )
 #define END_MENU() \
-    if (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM >= _menuItemNr) encoderPosition = _menuItemNr * ENCODER_STEPS_PER_MENU_ITEM - 1; \
-    if ((uint8_t)(encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) >= currentMenuViewOffset + LCD_HEIGHT) { currentMenuViewOffset = (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) - LCD_HEIGHT + 1; lcdDrawUpdate = 1; _lineNr = currentMenuViewOffset - 1; _drawLineNr = -1; } \
+    if (tencoderPosition / ENCODER_STEPS_PER_MENU_ITEM >= _menuItemNr) tencoderPosition = _menuItemNr * ENCODER_STEPS_PER_MENU_ITEM - 1; \
+    if ((uint8_t)(tencoderPosition / ENCODER_STEPS_PER_MENU_ITEM) >= currentMenuViewOffset + LCD_HEIGHT) { currentMenuViewOffset = (tencoderPosition / ENCODER_STEPS_PER_MENU_ITEM) - LCD_HEIGHT + 1; lcdDrawUpdate = 1; _lineNr = currentMenuViewOffset - 1; _drawLineNr = -1; } \
+    encoderPosition=-tencoderPosition; \
     } } while(0)
 
 /** Used variables to keep track of the menu */
 #ifndef REPRAPWORLD_KEYPAD
 volatile uint8_t buttons;//Contains the bits of the currently pressed buttons.
+#ifdef NUMBERBOARD
+volatile uint16_t numberbuttons;//Contains the bits of the currently pressed buttons.
+#endif
 #else
 volatile uint8_t buttons_reprapworld_keypad; // to store the reprapworld_keypad shiftregister values
 #endif
@@ -979,7 +988,7 @@ static void menu_action_setting_edit_bool(const char* pstr, bool* ptr)
 void lcd_init()
 {
     lcd_implementation_init();
-
+                  
 #ifdef NEWPANEL
     pinMode(BTN_EN1,INPUT);
     pinMode(BTN_EN2,INPUT); 
@@ -1022,7 +1031,26 @@ void lcd_init()
     lcd_buttons_update();
 #ifdef ULTIPANEL    
     encoderDiff = 0;
-#endif    
+#endif 
+
+
+#ifdef NUMBERBOARD
+    pinMode(MP_R0,INPUT);
+    WRITE(MP_R0,HIGH);
+    pinMode(MP_R1,INPUT);
+    WRITE(MP_R1,HIGH);
+    pinMode(MP_R2,INPUT);
+    WRITE(MP_R2,HIGH);
+    pinMode(MP_R3,INPUT);
+    WRITE(MP_R3,HIGH);
+
+    WRITE(MP_C0,LOW);
+    WRITE(MP_C1,LOW);
+    WRITE(MP_C2,LOW);
+    WRITE(MP_C3,LOW);
+    
+#endif   
+
 }
 
 void lcd_update()
@@ -1090,6 +1118,10 @@ void lcd_update()
         }
         if (LCD_CLICKED)
             timeoutToStatus = millis() + LCD_TIMEOUT_TO_STATUS;
+        #ifdef NUMBERBOARD
+        if(numberbuttons)    
+            timeoutToStatus = millis() + LCD_TIMEOUT_TO_STATUS;
+        #endif      
 #endif//ULTIPANEL
 
 #ifdef DOGLCD        // Changes due to different driver architecture of the DOGM display
@@ -1119,6 +1151,87 @@ void lcd_update()
             lcd_return_to_status();
             lcdDrawUpdate = 2;
         }
+  #ifdef NUMBERBOARD
+        if(numberbuttons&B_EXIT)
+        {
+            lcd_return_to_status();
+            lcdDrawUpdate = 2;
+        }
+
+        if(numberbuttons&B_STERN){  //power on
+          enquecommand_P((PSTR("M80"))); 
+        }
+        if(numberbuttons&B_RAUTE){  //power off
+          enquecommand_P((PSTR("M81"))); 
+        }
+        if (numberbuttons&B_8){ //Moter off
+          enquecommand_P((PSTR("M18"))); 
+          LCD_MESSAGEPGM("Motor holding OFF!");
+        }
+        
+        if (numberbuttons&B_4){ //Temp nozzel
+            currentMenu = lcd_control_temperature_menu;
+            encoderPosition = 1;
+            lcd_quick_feedback();                        
+        }
+        if (numberbuttons&B_6){ //Temp Pad
+            currentMenu = lcd_control_temperature_menu;
+            encoderPosition = 2;
+            lcd_quick_feedback();                        
+        }
+        if(!(movesplanned() || IS_SD_PRINTING)){   //not printing
+          if (numberbuttons&B_1){ //Move X
+            move_menu_scale = 1;
+            currentMenu = lcd_move_x;
+            encoderPosition = 0;
+            lcd_quick_feedback();                        
+          }
+          if (numberbuttons&B_2){ //Move y
+            move_menu_scale = 1;
+            currentMenu = lcd_move_y;
+            encoderPosition = 0;
+            lcd_quick_feedback();            
+          }
+          if (numberbuttons&B_3){ //Move z
+            move_menu_scale = 0.1;
+            currentMenu = lcd_move_z;
+            encoderPosition = 0;
+            lcd_quick_feedback();            
+          }
+          if (numberbuttons&B_7){  //Move e
+            move_menu_scale = 0.1;
+            currentMenu = lcd_move_e;
+            encoderPosition = 0;
+            lcd_quick_feedback();            
+          }
+          if (numberbuttons&B_9){  //prepair ABS / PLA
+            currentMenu = lcd_prepare_menu;
+            encoderPosition = 3;
+            lcd_quick_feedback();                        
+          }
+          if (numberbuttons&B_5){ //HOMEING
+            enquecommand_P((PSTR("G28")));
+          }
+      
+          if (numberbuttons&B_0){ //Cool down
+            lcd_cooldown();
+            LCD_MESSAGEPGM("Cool down!");
+          }
+        }
+        else
+        {
+          if (numberbuttons&B_3){ //babysteps z
+            #ifdef BABYSTEPPING
+            currentMenu = lcd_babystep_z;
+            encoderPosition = 0;
+            lcd_quick_feedback();            
+            #endif
+          }      
+        } 
+        
+                                                              
+        numberbuttons=0;  
+  #endif      
 #endif//ULTIPANEL
         if (lcdDrawUpdate == 2)
             lcd_implementation_clear();
@@ -1167,85 +1280,258 @@ void lcd_setcontrast(uint8_t value)
 /* Warning: This function is called from interrupt context */
 void lcd_buttons_update()
 {
-#ifdef NEWPANEL
-    uint8_t newbutton=0;
-    if(READ(BTN_EN1)==0)  newbutton|=EN_A;
-    if(READ(BTN_EN2)==0)  newbutton|=EN_B;
-  #if BTN_ENC > 0
-    if((blocking_enc<millis()) && (READ(BTN_ENC)==0))
-        newbutton |= EN_C;
-  #endif
-    buttons = newbutton;
-    #ifdef LCD_HAS_SLOW_BUTTONS
-    buttons |= slow_buttons;
-    #endif
-    #ifdef REPRAPWORLD_KEYPAD
-      // for the reprapworld_keypad
-      uint8_t newbutton_reprapworld_keypad=0;
-      WRITE(SHIFT_LD,LOW);
-      WRITE(SHIFT_LD,HIGH);
-      for(int8_t i=0;i<8;i++) {
-          newbutton_reprapworld_keypad = newbutton_reprapworld_keypad>>1;
-          if(READ(SHIFT_OUT))
-              newbutton_reprapworld_keypad|=(1<<7);
-          WRITE(SHIFT_CLK,HIGH);
-          WRITE(SHIFT_CLK,LOW);
-      }
-      buttons_reprapworld_keypad=~newbutton_reprapworld_keypad; //invert it, because a pressed switch produces a logical 0
-	#endif
-#else   //read it from the shift register
-    uint8_t newbutton=0;
-    WRITE(SHIFT_LD,LOW);
-    WRITE(SHIFT_LD,HIGH);
-    unsigned char tmp_buttons=0;
-    for(int8_t i=0;i<8;i++)
-    { 
-        newbutton = newbutton>>1;
-        if(READ(SHIFT_OUT))
-            newbutton|=(1<<7);
-        WRITE(SHIFT_CLK,HIGH);
-        WRITE(SHIFT_CLK,LOW);
-    }
-    buttons=~newbutton; //invert it, because a pressed switch produces a logical 0
-#endif//!NEWPANEL
-
-    //manage encoder rotation
-    uint8_t enc=0;
-    if(buttons&EN_A)
-        enc|=(1<<0);
-    if(buttons&EN_B)
-        enc|=(1<<1);
-    if(enc != lastEncoderBits)
-    {
-        switch(enc)
-        {
-        case encrot0:
-            if(lastEncoderBits==encrot3)
-                encoderDiff++;
-            else if(lastEncoderBits==encrot1)
-                encoderDiff--;
-            break;
-        case encrot1:
-            if(lastEncoderBits==encrot0)
-                encoderDiff++;
-            else if(lastEncoderBits==encrot2)
-                encoderDiff--;
-            break;
-        case encrot2:
-            if(lastEncoderBits==encrot1)
-                encoderDiff++;
-            else if(lastEncoderBits==encrot3)
-                encoderDiff--;
-            break;
-        case encrot3:
-            if(lastEncoderBits==encrot2)
-                encoderDiff++;
-            else if(lastEncoderBits==encrot0)
-                encoderDiff--;
-            break;
+  //lock for interrupt call during normal call
+  static volatile bool lock=false;
+  if(!lock)
+  {
+  lock=true;
+  
+    
+    #ifdef NEWPANEL
+        uint8_t newbutton=0;
+        if(READ(BTN_EN1)==0)  newbutton|=EN_A;
+        if(READ(BTN_EN2)==0)  newbutton|=EN_B;
+        
+      #if BTN_ENC > 0
+        if((blocking_enc<millis()) && (READ(BTN_ENC)==0))
+            newbutton |= EN_C;
+      #endif
+      
+        buttons = newbutton;
+        #ifdef LCD_HAS_SLOW_BUTTONS
+        buttons |= slow_buttons;
+        #endif
+        #ifdef REPRAPWORLD_KEYPAD
+          // for the reprapworld_keypad
+          uint8_t newbutton_reprapworld_keypad=0;
+          WRITE(SHIFT_LD,LOW);
+          WRITE(SHIFT_LD,HIGH);
+          for(int8_t i=0;i<8;i++) {
+              newbutton_reprapworld_keypad = newbutton_reprapworld_keypad>>1;
+              if(READ(SHIFT_OUT))
+                  newbutton_reprapworld_keypad|=(1<<7);
+              WRITE(SHIFT_CLK,HIGH);
+              WRITE(SHIFT_CLK,LOW);
+          }
+          buttons_reprapworld_keypad=~newbutton_reprapworld_keypad; //invert it, because a pressed switch produces a logical 0
+    	#endif
+    #else   //read it from the shift register
+        uint8_t newbutton=0;
+        WRITE(SHIFT_LD,LOW);
+        WRITE(SHIFT_LD,HIGH);
+        unsigned char tmp_buttons=0;
+        for(int8_t i=0;i<8;i++)
+        { 
+            newbutton = newbutton>>1;
+            if(READ(SHIFT_OUT))
+                newbutton|=(1<<7);
+            WRITE(SHIFT_CLK,HIGH);
+            WRITE(SHIFT_CLK,LOW);
         }
-    }
-    lastEncoderBits = enc;
+        buttons=~newbutton; //invert it, because a pressed switch produces a logical 0
+    #endif//!NEWPANEL
+    
+        //manage encoder rotation
+        uint8_t enc=0;
+        if(buttons&EN_A)
+            enc|=(1<<0);
+        if(buttons&EN_B)
+            enc|=(1<<1);
+        if(enc != lastEncoderBits)
+        {
+    
+    #ifdef ENCODER_HASE_NULL_POS
+            static int8_t temp=0;
+            switch(enc)
+            {
+            case encrot0:
+                if(lastEncoderBits==encrot3)
+                    temp++;
+                else if(lastEncoderBits==encrot1)
+                    temp--;
+                if(temp>2)
+                {
+                  temp=0;
+                  encoderDiff--;
+                }
+    
+                if(temp<-2)
+                {
+                  temp=0;
+                  encoderDiff++;
+                }
+                break;
+            case encrot1:
+                if(lastEncoderBits==encrot0)
+                    temp++;
+                else if(lastEncoderBits==encrot2)
+                    temp--;
+                break;
+            case encrot2:
+                if(lastEncoderBits==encrot1)
+                    temp++;
+                else if(lastEncoderBits==encrot3)
+                    temp--;
+                break;
+            case encrot3:
+                if(lastEncoderBits==encrot2)
+                    temp++;
+                else if(lastEncoderBits==encrot0)
+                    temp--;
+                break;
+            }
+    
+    #else
+            switch(enc)
+            {
+            case encrot0:
+                if(lastEncoderBits==encrot3)
+                    encoderDiff++;
+                else if(lastEncoderBits==encrot1)
+                    encoderDiff--;
+                break;
+            case encrot1:
+                if(lastEncoderBits==encrot0)
+                    encoderDiff++;
+                else if(lastEncoderBits==encrot2)
+                    encoderDiff--;
+                break;
+            case encrot2:
+                if(lastEncoderBits==encrot1)
+                    encoderDiff++;
+                else if(lastEncoderBits==encrot3)
+                    encoderDiff--;
+                break;
+            case encrot3:
+                if(lastEncoderBits==encrot2)
+                    encoderDiff++;
+                else if(lastEncoderBits==encrot0)
+                    encoderDiff--;
+                break;
+            }
+            
+    #endif
+    
+    
+        }
+        lastEncoderBits = enc;
+        
+    #ifdef NUMBERBOARD
+    
+      static uint8_t state=0;
+      static long block;
+      bool wait=false;
+    
+    
+        switch(state)
+        {
+          default:
+            state=0;
+            break;
+          case 0:
+            pinMode(MP_C0,OUTPUT);
+            pinMode(MP_C1,OUTPUT);
+            pinMode(MP_C2,OUTPUT);
+            pinMode(MP_C3,OUTPUT);
+            break;
+          case 1:
+            //nopressing
+            if(READ(MP_R0)!=0 && READ(MP_R1)!=0 && READ(MP_R2)!=0 && READ(MP_R3)!=0)
+              block=millis(); 
+            if((block+10)>millis())
+              wait=true;  //to not go on!
+            break;
+          case 2:
+            pinMode(MP_C0,OUTPUT);
+            pinMode(MP_C1,INPUT);
+            pinMode(MP_C2,INPUT);
+            pinMode(MP_C3,INPUT);
+            break;
+          case 3:
+            if(READ(MP_R0)==0)
+              numberbuttons|=B_1;  
+            if(READ(MP_R1)==0)
+              numberbuttons|=B_2;  
+            if(READ(MP_R2)==0)
+              numberbuttons|=B_3;  
+            if(READ(MP_R3)==0)
+            {
+              numberbuttons|=B_UP;  
+              encoderDiff++;
+            }
+            break;
+          case 4:
+            pinMode(MP_C0,INPUT);
+            pinMode(MP_C1,OUTPUT);
+            pinMode(MP_C2,INPUT);
+            pinMode(MP_C3,INPUT);
+            break;
+          case 5:
+            if(READ(MP_R0)==0)
+              numberbuttons|=B_4;  
+            if(READ(MP_R1)==0)
+              numberbuttons|=B_5;  
+            if(READ(MP_R2)==0)
+              numberbuttons|=B_6;  
+            if(READ(MP_R3)==0)
+            {
+              numberbuttons|=B_DOWN;      
+              encoderDiff--;
+            }
+            break;
+          case 6:
+            pinMode(MP_C0,INPUT);
+            pinMode(MP_C1,INPUT);
+            pinMode(MP_C2,OUTPUT);
+            pinMode(MP_C3,INPUT);
+            break;
+          case 7:
+            if(READ(MP_R0)==0)
+              numberbuttons|=B_7;  
+            if(READ(MP_R1)==0)
+              numberbuttons|=B_8;  
+            if(READ(MP_R2)==0)
+              numberbuttons|=B_9;  
+            if(READ(MP_R3)==0)
+              numberbuttons|=B_CLICK;      
+            break;
+          case 8:
+            pinMode(MP_C0,INPUT);
+            pinMode(MP_C1,INPUT);
+            pinMode(MP_C2,INPUT);
+            pinMode(MP_C3,OUTPUT);
+            break;
+          case 9:
+            if(READ(MP_R0)==0)
+              numberbuttons|=B_STERN;  
+            if(READ(MP_R1)==0)
+              numberbuttons|=B_0;  
+            if(READ(MP_R2)==0)
+              numberbuttons|=B_RAUTE;  
+            if(READ(MP_R3)==0)
+              numberbuttons|=B_EXIT;      
+            break;
+          case 10:
+            pinMode(MP_C0,OUTPUT);
+            pinMode(MP_C1,OUTPUT);
+            pinMode(MP_C2,OUTPUT);
+            pinMode(MP_C3,OUTPUT);
+            break;
+          case 11:
+            //pressing               
+            if(READ(MP_R0)==0 || READ(MP_R1)==0 || READ(MP_R2)==0 || READ(MP_R3)==0)
+              block=millis();
+            if((block+10)>millis())
+              wait=true;  //to not go on!
+            break;        
+        }
+        if(!wait)   
+          state++;
+          
+    #endif     
+        
+    lock=false;  
+  }    
 }
 
 void lcd_buzz(long duration, uint16_t freq)

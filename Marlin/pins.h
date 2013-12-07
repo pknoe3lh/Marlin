@@ -434,7 +434,8 @@
     #define SDSS               25//53
     #define LED_PIN            13
 
-    #define BEEPER             33    
+    #define BEEPER             33 
+       
 
   #else
 
@@ -570,13 +571,16 @@
       #define LCD_PINS_D6 27
       #define LCD_PINS_D7 29
 */
+
+      //my setup
       #define LCD_PINS_RS 32 
       #define LCD_PINS_ENABLE 45
+      #define LCD_PINS_RW 47      
       #define LCD_PINS_D4 43
       #define LCD_PINS_D5 41 
       #define LCD_PINS_D6 39
       #define LCD_PINS_D7 37
-      
+      #define USE_LIQUIDCRYSTALFAST
       
 
       #ifdef REPRAP_DISCOUNT_SMART_CONTROLLER
@@ -602,8 +606,8 @@
         #define SDCARDDETECT 49
       #else
         //arduino pin which triggers an piezzo beeper
-        #define BEEPER 33  // Beeper on AUX-4
-
+        #define BEEPER 16  // Beeper on AUX-4
+        
         //buttons are directly attached using AUX-2
         #ifdef REPRAPWORLD_KEYPAD
           #define BTN_EN1 64 // encoder
@@ -613,9 +617,9 @@
           #define SHIFT_CLK 44 // shift register
           #define SHIFT_LD 42 // shift register
         #else
-          #define BTN_EN1 37
-          #define BTN_EN2 35
-          #define BTN_ENC 31  //the click
+          #define BTN_EN1 40
+          #define BTN_EN2 42
+          #define BTN_ENC 63  //the click  
         #endif
 
         #ifdef G3D_PANEL
@@ -2365,13 +2369,17 @@
                         analogInputToDigitalPin(TEMP_0_PIN), analogInputToDigitalPin(TEMP_1_PIN), analogInputToDigitalPin(TEMP_2_PIN), analogInputToDigitalPin(TEMP_BED_PIN) }
 #endif
 
+#ifdef NUMBERBOARD
+      //Numberbad
+      #define MP_C0 27
+      #define MP_C1 25
+      #define MP_C2 23
+      #define MP_C3 17
+      #define MP_R0 35
+      #define MP_R1 33
+      #define MP_R2 31
+      #define MP_R3 29      
+#endif      
 
-//Numberbad
-#define MP_C0 27
-#define MP_C1 25
-#define MP_C2 23
-#define MP_C3 17
-#define MP_R0 35
-#define MP_R1 33
-#define MP_R2 31
-#define MP_R3 29
+
+                                         

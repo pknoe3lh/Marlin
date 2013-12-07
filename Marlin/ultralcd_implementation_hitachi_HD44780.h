@@ -100,7 +100,7 @@ extern volatile uint16_t buttons;  //an extended version of the last checked but
     #define REPRAPWORLD_KEYPAD_MOVE_HOME (buttons&EN_REPRAPWORLD_KEYPAD_MIDDLE)
 
 #elif defined(NEWPANEL)
-  #define LCD_CLICKED (buttons&EN_C)
+  //#define LCD_CLICKED (buttons&EN_C)
   
 #else // old style ULTIPANEL
   //bits in the shift register that carry the buttons for:
@@ -188,12 +188,16 @@ extern volatile uint16_t buttons;  //an extended version of the last checked but
   #define LCD_CLASS LiquidCrystal_SR
   LCD_CLASS lcd(SR_DATA_PIN, SR_CLK_PIN);
 
-#else
+#elif defined(USE_LIQUIDCRYSTALFAST) 
+  #include <LiquidCrystalFast.h>
+  #define LCD_CLASS LiquidCrystalFast
+  LCD_CLASS lcd(LCD_PINS_RS, LCD_PINS_RW, LCD_PINS_ENABLE, LCD_PINS_D4, LCD_PINS_D5,LCD_PINS_D6,LCD_PINS_D7);  // LCD pins: RS  RW  EN  D4 D5 D6 D7
+#else 
   // Standard directly connected LCD implementations
   #if LANGUAGE_CHOICE == 6
     #include "LiquidCrystalRus.h"
     #define LCD_CLASS LiquidCrystalRus
-  #else 
+  #else  
     #include <LiquidCrystal.h>
     #define LCD_CLASS LiquidCrystal
   #endif  
@@ -319,6 +323,7 @@ static void lcd_implementation_init()
     
 #else
     lcd.begin(LCD_WIDTH, LCD_HEIGHT);
+    
 #endif
 
     lcd.createChar(LCD_STR_BEDTEMP[0], bedTemp);
@@ -328,7 +333,7 @@ static void lcd_implementation_init()
     lcd.createChar(LCD_STR_REFRESH[0], refresh);
     lcd.createChar(LCD_STR_FOLDER[0], folder);
     lcd.createChar(LCD_STR_FEEDRATE[0], feedrate);
-    lcd.createChar(LCD_STR_CLOCK[0], clock);
+    lcd.createChar(LCD_STR_CLOCK[0], clock);  
     lcd.clear();
 }
 static void lcd_implementation_clear()

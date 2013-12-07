@@ -51,7 +51,12 @@
     #define EN_B (1<<BLEN_B)
     #define EN_A (1<<BLEN_A)
 
-    #define LCD_CLICKED (buttons&EN_C)
+    #ifdef NUMBERBOARD
+      #define LCD_CLICKED ((buttons&EN_C) || (numberbuttons&B_CLICK))
+    #else  
+      #define LCD_CLICKED (buttons&EN_C)
+    #endif  
+
     #ifdef REPRAPWORLD_KEYPAD
   	  #define EN_REPRAPWORLD_KEYPAD_F3 (1<<BLEN_REPRAPWORLD_KEYPAD_F3)
   	  #define EN_REPRAPWORLD_KEYPAD_F2 (1<<BLEN_REPRAPWORLD_KEYPAD_F2)
@@ -85,7 +90,29 @@
     #define LCD_CLICKED ((buttons&B_MI)||(buttons&B_ST))
   #endif//NEWPANEL
 
-#else //no lcd
+  #ifdef NUMBERBOARD
+    //buttons are directly attached
+    #define B_1 (1<<0)
+    #define B_2 (1<<1)
+    #define B_3 (1<<2)
+    #define B_UP (1<<3)
+    #define B_4 (1<<4)
+    #define B_5 (1<<5)
+    #define B_6 (1<<6)
+    #define B_DOWN (1<<7)
+    #define B_7 (1<<8)
+    #define B_8 (1<<9)
+    #define B_9 (1<<10)
+    #define B_CLICK (1<<11)
+    #define B_STERN (1<<12)
+    #define B_0 (1<<13)
+    #define B_RAUTE (1<<14)
+    #define B_EXIT (1<<15)    
+  #endif    
+    
+
+
+#else //no lcd   
   FORCE_INLINE void lcd_update() {}
   FORCE_INLINE void lcd_init() {}
   FORCE_INLINE void lcd_setstatus(const char* message) {}
