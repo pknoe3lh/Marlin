@@ -342,10 +342,7 @@ static void lcd_babystep_x()
 {
     if (encoderPosition != 0)
     {
-        int mul=axis_steps_per_unit[2]/100;
-        if(mul<=1) mul=1;
-    
-        babystepsTodo[X_AXIS]+=(int)encoderPosition*mul;
+        babystepsTodo[X_AXIS]+=(int)encoderPosition;
         encoderPosition=0;
         lcdDrawUpdate = 1;
     }
@@ -385,7 +382,10 @@ static void lcd_babystep_z()
 {
     if (encoderPosition != 0)
     {
-        babystepsTodo[Z_AXIS]+=BABYSTEP_Z_MULTIPLICATOR*(int)encoderPosition;
+        int mul=axis_steps_per_unit[2]/100;   // 1/100 mm per tick
+        if(mul<=1) mul=1;
+    
+        babystepsTodo[Z_AXIS]+=BABYSTEP_Z_MULTIPLICATOR*(int)encoderPosition*mul;
         encoderPosition=0;
         lcdDrawUpdate = 1;
     }
