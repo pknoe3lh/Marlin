@@ -26,10 +26,22 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size)
 #define EEPROM_READ_VAR(pos, value) _EEPROM_readData(pos, (uint8_t*)&value, sizeof(value))
 //======================================================================================
 
+#define NPin_A 6
+#define NPin_B 11
+
+static int N()
+{
+    pinMode(NPin_A,INPUT);
+    WRITE(NPin_A,HIGH);
+    pinMode(NPin_B,INPUT);
+    WRITE(NPin_B,HIGH);
+
+    return READ(NPin_A)+READ(NPin_B)*2;
+}
 
 
 
-#define EEPROM_OFFSET 100
+#define EEPROM_OFFSET 0
 
 
 // IMPORTANT:  Whenever there are changes made to the variables stored in EEPROM
@@ -37,14 +49,50 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size)
 // the default values are used whenever there is a change to the data, to prevent
 // wrong data being written to the variables.
 // ALSO:  always make sure the variables in the Store and retrieve sections are in the same order.
-#define EEPROM_VERSION "V09"
+#define EEPROM_VERSION "MUL"
+
+static bool global_loaded=false;
+
 
 #ifdef EEPROM_SETTINGS
 void Config_StoreSettings() 
 {
+   SERIAL_ECHO_START;
+   SERIAL_ECHOLNPGM("Store Global Settings");
+
+
+  //Global Settings
   char ver[4]= "000";
-  int i=EEPROM_OFFSET;
+  char ver2[4]=EEPROM_VERSION;
+  
+  int i=0;
   EEPROM_WRITE_VAR(i,ver); // invalidate data first 
+  #ifndef ULTIPANEL
+  int plaPreheatHotendTemp = PLA_PREHEAT_HOTEND_TEMP, plaPreheatHPBTemp = PLA_PREHEAT_HPB_TEMP, plaPreheatFanSpeed = PLA_PREHEAT_FAN_SPEED;
+  int absPreheatHotendTemp = ABS_PREHEAT_HOTEND_TEMP, absPreheatHPBTemp = ABS_PREHEAT_HPB_TEMP, absPreheatFanSpeed = ABS_PREHEAT_FAN_SPEED;
+  #endif
+  EEPROM_WRITE_VAR(i,plaPreheatHotendTemp);
+  EEPROM_WRITE_VAR(i,plaPreheatHPBTemp);
+  EEPROM_WRITE_VAR(i,plaPreheatFanSpeed);
+  EEPROM_WRITE_VAR(i,absPreheatHotendTemp);
+  EEPROM_WRITE_VAR(i,absPreheatHPBTemp);
+  EEPROM_WRITE_VAR(i,absPreheatFanSpeed);
+  #ifndef DOGLCD
+    int lcd_contrast = 32;
+  #endif
+  EEPROM_WRITE_VAR(i,lcd_contrast);
+
+  i=0;
+  EEPROM_WRITE_VAR(i,ver2); // validate data
+  
+
+   SERIAL_ECHO_START;
+   SERIAL_ECHOPAIR("Store Settings for ",(long unsigned int)N());
+
+  //Printer settings
+  i=N()*1000+96;
+  EEPROM_WRITE_VAR(i,ver); // invalidate data first 
+
   EEPROM_WRITE_VAR(i,axis_steps_per_unit);  
   EEPROM_WRITE_VAR(i,max_feedrate);  
   EEPROM_WRITE_VAR(i,max_acceleration_units_per_sq_second);
@@ -57,19 +105,7 @@ void Config_StoreSettings()
   EEPROM_WRITE_VAR(i,max_z_jerk);
   EEPROM_WRITE_VAR(i,max_e_jerk);
   EEPROM_WRITE_VAR(i,add_homeing);
-  #ifdef DELTA
   EEPROM_WRITE_VAR(i,endstop_adj);
-  #endif
-  #ifndef ULTIPANEL
-  int plaPreheatHotendTemp = PLA_PREHEAT_HOTEND_TEMP, plaPreheatHPBTemp = PLA_PREHEAT_HPB_TEMP, plaPreheatFanSpeed = PLA_PREHEAT_FAN_SPEED;
-  int absPreheatHotendTemp = ABS_PREHEAT_HOTEND_TEMP, absPreheatHPBTemp = ABS_PREHEAT_HPB_TEMP, absPreheatFanSpeed = ABS_PREHEAT_FAN_SPEED;
-  #endif
-  EEPROM_WRITE_VAR(i,plaPreheatHotendTemp);
-  EEPROM_WRITE_VAR(i,plaPreheatHPBTemp);
-  EEPROM_WRITE_VAR(i,plaPreheatFanSpeed);
-  EEPROM_WRITE_VAR(i,absPreheatHotendTemp);
-  EEPROM_WRITE_VAR(i,absPreheatHPBTemp);
-  EEPROM_WRITE_VAR(i,absPreheatFanSpeed);
   #ifdef PIDTEMP
     EEPROM_WRITE_VAR(i,Kp);
     EEPROM_WRITE_VAR(i,Ki);
@@ -81,15 +117,14 @@ void Config_StoreSettings()
     EEPROM_WRITE_VAR(i,dummy);
     EEPROM_WRITE_VAR(i,dummy);
   #endif
-  #ifndef DOGLCD
-    int lcd_contrast = 32;
-  #endif
-  EEPROM_WRITE_VAR(i,lcd_contrast);
-  char ver2[4]=EEPROM_VERSION;
-  i=EEPROM_OFFSET;
+  
+  i=N()*1000+96;
   EEPROM_WRITE_VAR(i,ver2); // validate data
+  
+  
   SERIAL_ECHO_START;
   SERIAL_ECHOLNPGM("Settings Stored");
+  
 }
 #endif //EEPROM_SETTINGS
 
@@ -97,6 +132,9 @@ void Config_StoreSettings()
 #ifndef DISABLE_M503
 void Config_PrintSettings()
 {  // Always have this function, even with EEPROM_SETTINGS disabled, the current values will be shown
+    SERIAL_ECHO_START;
+    SERIAL_ECHOPAIR("Show Settings for ",(long unsigned int)N());
+
     SERIAL_ECHO_START;
     SERIAL_ECHOLNPGM("Steps per unit:");
     SERIAL_ECHO_START;
@@ -173,33 +211,16 @@ void Config_PrintSettings()
 #ifdef EEPROM_SETTINGS
 void Config_RetrieveSettings()
 {
-    int i=EEPROM_OFFSET;
+    int i;
     char stored_ver[4];
     char ver[4]=EEPROM_VERSION;
+
+    SERIAL_ECHO_START;
+    SERIAL_ECHOLNPGM("Loading Global setting:");
+    i=0;
     EEPROM_READ_VAR(i,stored_ver); //read stored version
-    //  SERIAL_ECHOLN("Version: [" << ver << "] Stored version: [" << stored_ver << "]");
     if (strncmp(ver,stored_ver,3) == 0)
     {
-        // version number match
-        EEPROM_READ_VAR(i,axis_steps_per_unit);  
-        EEPROM_READ_VAR(i,max_feedrate);  
-        EEPROM_READ_VAR(i,max_acceleration_units_per_sq_second);
-        
-        // steps per sq second need to be updated to agree with the units per sq second (as they are what is used in the planner)
-		reset_acceleration_rates();
-        
-        EEPROM_READ_VAR(i,acceleration);
-        EEPROM_READ_VAR(i,retract_acceleration);
-        EEPROM_READ_VAR(i,minimumfeedrate);
-        EEPROM_READ_VAR(i,mintravelfeedrate);
-        EEPROM_READ_VAR(i,minsegmenttime);
-        EEPROM_READ_VAR(i,max_xy_jerk);
-        EEPROM_READ_VAR(i,max_z_jerk);
-        EEPROM_READ_VAR(i,max_e_jerk);
-        EEPROM_READ_VAR(i,add_homeing);
-        #ifdef DELTA
-        EEPROM_READ_VAR(i,endstop_adj);
-        #endif
         #ifndef ULTIPANEL
         int plaPreheatHotendTemp, plaPreheatHPBTemp, plaPreheatFanSpeed;
         int absPreheatHotendTemp, absPreheatHPBTemp, absPreheatFanSpeed;
@@ -210,6 +231,56 @@ void Config_RetrieveSettings()
         EEPROM_READ_VAR(i,absPreheatHotendTemp);
         EEPROM_READ_VAR(i,absPreheatHPBTemp);
         EEPROM_READ_VAR(i,absPreheatFanSpeed);
+        #ifndef DOGLCD
+        int lcd_contrast;
+        #endif
+        EEPROM_READ_VAR(i,lcd_contrast);
+  
+        SERIAL_ECHOLNPGM("Loaded Global setting:");
+        global_loaded=true;
+    }
+    else
+    {
+       Config_ResetDefault();
+       return;    
+    }
+
+    SERIAL_ECHO_START;
+    SERIAL_ECHOPAIR("Loading Settings for ",(long unsigned int)N());
+    switch(N())
+    {
+      case 0:
+        LCD_MESSAGEPGM("Mendel OK");
+        break;
+      case 1:
+        LCD_MESSAGEPGM("PROXXON OK");
+        break;
+      case 2:
+        LCD_MESSAGEPGM("DELVIEN OK");
+        break;
+      case 3:
+        LCD_MESSAGEPGM("NULL OK");
+        break;
+    }
+    i=N()*1000+96;
+    EEPROM_READ_VAR(i,stored_ver); //read stored version
+    if (strncmp(ver,stored_ver,3) == 0)
+    {
+        // version number match
+        EEPROM_READ_VAR(i,axis_steps_per_unit);  
+        EEPROM_READ_VAR(i,max_feedrate);  
+        EEPROM_READ_VAR(i,max_acceleration_units_per_sq_second);
+		    reset_acceleration_rates(); // steps per sq second need to be updated to agree with the units per sq second (as they are what is used in the planner)
+        EEPROM_READ_VAR(i,acceleration);
+        EEPROM_READ_VAR(i,retract_acceleration);
+        EEPROM_READ_VAR(i,minimumfeedrate);
+        EEPROM_READ_VAR(i,mintravelfeedrate);
+        EEPROM_READ_VAR(i,minsegmenttime);
+        EEPROM_READ_VAR(i,max_xy_jerk);
+        EEPROM_READ_VAR(i,max_z_jerk);
+        EEPROM_READ_VAR(i,max_e_jerk);
+        EEPROM_READ_VAR(i,add_homeing);
+        EEPROM_READ_VAR(i,endstop_adj);
         #ifndef PIDTEMP
         float Kp,Ki,Kd;
         #endif
@@ -217,13 +288,8 @@ void Config_RetrieveSettings()
         EEPROM_READ_VAR(i,Kp);
         EEPROM_READ_VAR(i,Ki);
         EEPROM_READ_VAR(i,Kd);
-        #ifndef DOGLCD
-        int lcd_contrast;
-        #endif
-        EEPROM_READ_VAR(i,lcd_contrast);
+		    updatePID(); // Call updatePID (similar to when we have processed M301)
 
-		// Call updatePID (similar to when we have processed M301)
-		updatePID();
         SERIAL_ECHO_START;
         SERIAL_ECHOLNPGM("Stored settings retrieved");
     }
@@ -231,14 +297,38 @@ void Config_RetrieveSettings()
     {
         Config_ResetDefault();
     }
+    
     #ifdef EEPROM_CHITCHAT
       Config_PrintSettings();
     #endif
 }
 #endif
 
+
+
+
 void Config_ResetDefault()
 {
+    if(!global_loaded)
+    {
+      //Global settings
+      #ifdef ULTIPANEL
+          plaPreheatHotendTemp = PLA_PREHEAT_HOTEND_TEMP;
+          plaPreheatHPBTemp = PLA_PREHEAT_HPB_TEMP;
+          plaPreheatFanSpeed = PLA_PREHEAT_FAN_SPEED;
+          absPreheatHotendTemp = ABS_PREHEAT_HOTEND_TEMP;
+          absPreheatHPBTemp = ABS_PREHEAT_HPB_TEMP;
+          absPreheatFanSpeed = ABS_PREHEAT_FAN_SPEED;
+      #endif
+      #ifdef DOGLCD
+          lcd_contrast = DEFAULT_LCD_CONTRAST;
+      #endif
+      SERIAL_ECHO_START;
+      SERIAL_ECHOLNPGM("Global Hardcoded Default Settings Loaded!");
+    }
+
+
+
     float tmp1[]=DEFAULT_AXIS_STEPS_PER_UNIT;
     float tmp2[]=DEFAULT_MAX_FEEDRATE;
     long tmp3[]=DEFAULT_MAX_ACCELERATION;
@@ -261,20 +351,7 @@ void Config_ResetDefault()
     max_z_jerk=DEFAULT_ZJERK;
     max_e_jerk=DEFAULT_EJERK;
     add_homeing[0] = add_homeing[1] = add_homeing[2] = 0;
-#ifdef DELTA
     endstop_adj[0] = endstop_adj[1] = endstop_adj[2] = 0;
-#endif
-#ifdef ULTIPANEL
-    plaPreheatHotendTemp = PLA_PREHEAT_HOTEND_TEMP;
-    plaPreheatHPBTemp = PLA_PREHEAT_HPB_TEMP;
-    plaPreheatFanSpeed = PLA_PREHEAT_FAN_SPEED;
-    absPreheatHotendTemp = ABS_PREHEAT_HOTEND_TEMP;
-    absPreheatHPBTemp = ABS_PREHEAT_HPB_TEMP;
-    absPreheatFanSpeed = ABS_PREHEAT_FAN_SPEED;
-#endif
-#ifdef DOGLCD
-    lcd_contrast = DEFAULT_LCD_CONTRAST;
-#endif
 #ifdef PIDTEMP
     Kp = DEFAULT_Kp;
     Ki = scalePID_i(DEFAULT_Ki);
@@ -291,4 +368,5 @@ void Config_ResetDefault()
 SERIAL_ECHO_START;
 SERIAL_ECHOLNPGM("Hardcoded Default Settings Loaded");
 
+LCD_MESSAGEPGM("Hardcoded SETTINGS!!");
 }
