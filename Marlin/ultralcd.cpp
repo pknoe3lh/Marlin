@@ -342,7 +342,10 @@ static void lcd_babystep_x()
 {
     if (encoderPosition != 0)
     {
-        babystepsTodo[X_AXIS]+=(int)encoderPosition;
+        int mul=axis_steps_per_unit[2]/100;
+        if(mul<=1) mul=1;
+    
+        babystepsTodo[X_AXIS]+=(int)encoderPosition*mul;
         encoderPosition=0;
         lcdDrawUpdate = 1;
     }
@@ -1171,12 +1174,12 @@ void lcd_update()
         
         if (numberbuttons&B_4){ //Temp nozzel
             currentMenu = lcd_control_temperature_menu;
-            encoderPosition = 1;
+            encoderPosition = -1;
             lcd_quick_feedback();                        
         }
         if (numberbuttons&B_6){ //Temp Pad
             currentMenu = lcd_control_temperature_menu;
-            encoderPosition = 2;
+            encoderPosition = -2;
             lcd_quick_feedback();                        
         }
         if(!(movesplanned() || IS_SD_PRINTING)){   //not printing
@@ -1206,7 +1209,7 @@ void lcd_update()
           }
           if (numberbuttons&B_9){  //prepair ABS / PLA
             currentMenu = lcd_prepare_menu;
-            encoderPosition = 3;
+            encoderPosition = -3;
             lcd_quick_feedback();                        
           }
           if (numberbuttons&B_5){ //HOMEING
