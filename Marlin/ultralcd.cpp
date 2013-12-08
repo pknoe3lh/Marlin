@@ -334,6 +334,7 @@ static void lcd_cooldown()
     setTargetHotend1(0);
     setTargetHotend2(0);
     setTargetBed(0);
+    fanSpeed = 255;
     lcd_return_to_status();
 }
 
