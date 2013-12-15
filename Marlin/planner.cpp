@@ -705,6 +705,8 @@ block->steps_y = labs((target[X_AXIS]-position[X_AXIS]) - (target[Y_AXIS]-positi
 #endif
 
 #ifdef SLOWDOWN
+if(!usedelta)
+{
   //  segment time im micro seconds
   unsigned long segment_time = lround(1000000.0/inverse_second);
   if ((moves_queued > 1) && (moves_queued < (BLOCK_BUFFER_SIZE * 0.5)))
@@ -717,6 +719,7 @@ block->steps_y = labs((target[X_AXIS]-position[X_AXIS]) - (target[Y_AXIS]-positi
       #endif
     }
   }
+}
 #endif
   //  END OF SLOW DOWN SECTION    
 

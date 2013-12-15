@@ -49,7 +49,7 @@ static int N()
 // the default values are used whenever there is a change to the data, to prevent
 // wrong data being written to the variables.
 // ALSO:  always make sure the variables in the Store and retrieve sections are in the same order.
-#define EEPROM_VERSION "MUL"
+#define EEPROM_VERSION "ML1"
 
 static bool global_loaded=false;
 
@@ -85,14 +85,23 @@ void Config_StoreSettings()
   i=0;
   EEPROM_WRITE_VAR(i,ver2); // validate data
   
-
-   SERIAL_ECHO_START;
-   SERIAL_ECHOPAIR("Store Settings for ",(long unsigned int)N());
+  SERIAL_ECHO_START;
+  SERIAL_ECHOPAIR("Store Settings for ",(long unsigned int)N());
 
   //Printer settings
   i=N()*1000+96;
   EEPROM_WRITE_VAR(i,ver); // invalidate data first 
 
+  //Delta
+  EEPROM_WRITE_VAR(i,usedelta);  
+  EEPROM_WRITE_VAR(i,deltaSegmentsPerSecound);  
+  EEPROM_WRITE_VAR(i,deltaDiagonalRod);  
+  EEPROM_WRITE_VAR(i,deltaRadius);    
+  EEPROM_WRITE_VAR(i,endstop_adj);
+
+  EEPROM_WRITE_VAR(i,invertXdir);  
+  EEPROM_WRITE_VAR(i,invertYdir);  
+  EEPROM_WRITE_VAR(i,invertZdir);  
   EEPROM_WRITE_VAR(i,axis_steps_per_unit);  
   EEPROM_WRITE_VAR(i,max_feedrate);  
   EEPROM_WRITE_VAR(i,max_acceleration_units_per_sq_second);
@@ -105,7 +114,6 @@ void Config_StoreSettings()
   EEPROM_WRITE_VAR(i,max_z_jerk);
   EEPROM_WRITE_VAR(i,max_e_jerk);
   EEPROM_WRITE_VAR(i,add_homeing);
-  EEPROM_WRITE_VAR(i,endstop_adj);
   #ifdef PIDTEMP
     EEPROM_WRITE_VAR(i,Kp);
     EEPROM_WRITE_VAR(i,Ki);
@@ -186,7 +194,25 @@ void Config_PrintSettings()
     SERIAL_ECHOPAIR(" Y" ,add_homeing[1] );
     SERIAL_ECHOPAIR(" Z" ,add_homeing[2] );
     SERIAL_ECHOLN("");
-#ifdef DELTA
+
+    SERIAL_ECHO_START;
+    SERIAL_ECHOLNPGM("Invert Directions");
+    SERIAL_ECHO_START;
+    SERIAL_ECHOPAIR("  M664 X",invertXdir?1.0:0.0);
+    SERIAL_ECHOPAIR("  Y",invertYdir?1.0:0.0);
+    SERIAL_ECHOPAIR("  Z",invertZdir?1.0:0.0);
+    SERIAL_ECHOLN("");
+
+//#ifdef DELTA
+    SERIAL_ECHO_START;
+    SERIAL_ECHOLNPGM("set delta options: E=enable, S=Segments per Secounds, D=DiagonalRod, R=Radius");
+    SERIAL_ECHO_START;
+    SERIAL_ECHOPAIR("  M665 E",usedelta?1.0:0.0);
+    SERIAL_ECHOPAIR(" S" ,deltaSegmentsPerSecound );
+    SERIAL_ECHOPAIR(" D" ,deltaDiagonalRod );
+    SERIAL_ECHOPAIR(" R" ,deltaRadius );
+    SERIAL_ECHOLN("");
+    
     SERIAL_ECHO_START;
     SERIAL_ECHOLNPGM("Endstop adjustement (mm):");
     SERIAL_ECHO_START;
@@ -194,7 +220,7 @@ void Config_PrintSettings()
     SERIAL_ECHOPAIR(" Y" ,endstop_adj[1] );
     SERIAL_ECHOPAIR(" Z" ,endstop_adj[2] );
     SERIAL_ECHOLN("");
-#endif
+//#endif
 #ifdef PIDTEMP
     SERIAL_ECHO_START;
     SERIAL_ECHOLNPGM("PID settings:");
@@ -267,6 +293,18 @@ void Config_RetrieveSettings()
     if (strncmp(ver,stored_ver,3) == 0)
     {
         // version number match
+        
+        //Delta
+        EEPROM_READ_VAR(i,usedelta);  
+        EEPROM_READ_VAR(i,deltaSegmentsPerSecound);  
+        EEPROM_READ_VAR(i,deltaDiagonalRod);  
+        EEPROM_READ_VAR(i,deltaRadius);  
+        calcdelta();  
+        EEPROM_READ_VAR(i,endstop_adj);
+          
+        EEPROM_READ_VAR(i,invertXdir);  
+        EEPROM_READ_VAR(i,invertYdir);  
+        EEPROM_READ_VAR(i,invertZdir);  
         EEPROM_READ_VAR(i,axis_steps_per_unit);  
         EEPROM_READ_VAR(i,max_feedrate);  
         EEPROM_READ_VAR(i,max_acceleration_units_per_sq_second);
@@ -280,7 +318,6 @@ void Config_RetrieveSettings()
         EEPROM_READ_VAR(i,max_z_jerk);
         EEPROM_READ_VAR(i,max_e_jerk);
         EEPROM_READ_VAR(i,add_homeing);
-        EEPROM_READ_VAR(i,endstop_adj);
         #ifndef PIDTEMP
         float Kp,Ki,Kd;
         #endif
@@ -328,7 +365,17 @@ void Config_ResetDefault()
     }
 
 
+    //Delta
+    usedelta=false;
+    deltaSegmentsPerSecound=DELTA_SEGMENTS_PER_SECOND;
+    deltaDiagonalRod=DELTA_DIAGONAL_ROD;
+    deltaRadius=DELTA_RADIUS;
+    calcdelta();
+    endstop_adj[0] = endstop_adj[1] = endstop_adj[2] = 0;
 
+    invertXdir=INVERT_X_DIR;  
+    invertYdir=INVERT_Y_DIR;  
+    invertZdir=INVERT_Z_DIR;    
     float tmp1[]=DEFAULT_AXIS_STEPS_PER_UNIT;
     float tmp2[]=DEFAULT_MAX_FEEDRATE;
     long tmp3[]=DEFAULT_MAX_ACCELERATION;
@@ -351,7 +398,6 @@ void Config_ResetDefault()
     max_z_jerk=DEFAULT_ZJERK;
     max_e_jerk=DEFAULT_EJERK;
     add_homeing[0] = add_homeing[1] = add_homeing[2] = 0;
-    endstop_adj[0] = endstop_adj[1] = endstop_adj[2] = 0;
 #ifdef PIDTEMP
     Kp = DEFAULT_Kp;
     Ki = scalePID_i(DEFAULT_Ki);

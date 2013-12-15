@@ -174,10 +174,25 @@ void FlushSerialRequestResend();
 void ClearToSend();
 
 void get_coordinates();
-#ifdef DELTA
+
+extern bool invertXdir;
+extern bool invertYdir;
+extern bool invertZdir;
+
+extern bool usedelta;
+//DELTA_SEGMENTS_PER_SECOND
+extern float deltaSegmentsPerSecound;
+//DELTA_DIAGONAL_ROD
+extern float deltaDiagonalRod;
+//DELTA_RADIUS
+extern float deltaRadius;
+
+void calcdelta();
+
+//#ifdef DELTA
 void calculate_delta(float cartesian[3]);
 extern float delta[3];
-#endif
+//#endif
 void prepare_move();
 void kill();
 void Stop();

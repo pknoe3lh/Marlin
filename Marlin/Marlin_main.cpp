@@ -158,6 +158,8 @@
 // M503 - print the current settings (from memory not from eeprom)
 // M540 - Use S[0|1] to enable or disable the stop SD card print on endstop hit (requires ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
 // M600 - Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
+// M664 - set Dir Invert
+// M665 - set delta options
 // M666 - set delta endstop adjustemnt
 // M605 - Set dual x-carriage movement mode: S<mode> [ X<duplication x-offset> R<duplication temp offset> ]
 // M907 - Set digital trimpot motor current using axis codes.
@@ -227,9 +229,35 @@ int EtoPPressure=0;
 	bool powersupply = true;
 #endif
 
-#ifdef DELTA
+bool invertXdir;
+bool invertYdir;
+bool invertZdir;
+
+bool usedelta;
+float deltaSegmentsPerSecound;
+float deltaDiagonalRod;
+float deltaRadius;
+
+static float deltaDiagonalRod2;
+static float deltaTower1_x;
+static float deltaTower1_y;
+static float deltaTower2_x;
+static float deltaTower2_y;
+static float deltaTower3_x;
+static float deltaTower3_y;
+void calcdelta()
+{
+  deltaDiagonalRod2=deltaDiagonalRod*deltaDiagonalRod;
+  deltaTower1_x=-SIN_60*deltaRadius;
+  deltaTower1_y=-COS_60*deltaRadius;
+  deltaTower2_x=SIN_60*deltaRadius;
+  deltaTower2_y=-COS_60*deltaRadius;
+  deltaTower3_x=0.0;
+  deltaTower3_y=deltaRadius;
+}
+//#ifdef DELTA
 float delta[3] = {0.0, 0.0, 0.0};
-#endif
+//#endif
 
 //===========================================================================
 //=============================private variables=============================
@@ -941,7 +969,7 @@ static void homeaxis(int axis) {
       axis==Y_AXIS ? HOMEAXIS_DO(Y) :
       axis==Z_AXIS ? HOMEAXIS_DO(Z) :
       0) {
-    int axis_home_dir = home_dir(axis);
+    int axis_home_dir = usedelta? 1 :home_dir(axis);
 #ifdef DUAL_X_CARRIAGE
     if (axis == X_AXIS)
       axis_home_dir = x_home_dir(active_extruder);
@@ -971,19 +999,19 @@ static void homeaxis(int axis) {
 
     current_position[axis] = 0;
     plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-    destination[axis] = -home_retract_mm(axis) * axis_home_dir;
+    destination[axis] = -home_retract_mm(usedelta?X_AXIS:axis) * axis_home_dir;
     plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
     st_synchronize();
 
-    destination[axis] = 2*home_retract_mm(axis) * axis_home_dir;
-#ifdef DELTA
-    feedrate = homing_feedrate[axis]/10;
-#else
+    destination[axis] = 2*home_retract_mm(usedelta?X_AXIS:axis) * axis_home_dir;
+if(usedelta){//#ifdef DELTA
+    feedrate = homing_feedrate[X_AXIS]/10;
+}else{
     feedrate = homing_feedrate[axis]/2 ;
-#endif
+}//#endif
     plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
     st_synchronize();
-#ifdef DELTA
+if(usedelta){//#ifdef DELTA
     // retrace by the amount specified in endstop_adj
     if (endstop_adj[axis] * axis_home_dir < 0) {
       plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
@@ -991,7 +1019,7 @@ static void homeaxis(int axis) {
       plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
       st_synchronize();
     }
-#endif
+}//#endif
     axis_is_at_home(axis);
     destination[axis] = current_position[axis];
     feedrate = 0.0;
@@ -1106,7 +1134,7 @@ void process_commands()
       }
       feedrate = 0.0;
 
-#ifdef DELTA
+if(usedelta){//#ifdef DELTA
           // A delta can only safely home all axis at the same time
           // all axis have to home at the same time
 
@@ -1136,7 +1164,7 @@ void process_commands()
           calculate_delta(current_position);
           plan_set_position(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS]);
 
-#else // NOT DELTA
+}else{ // NOT DELTA
 
       home_all_axis = !((code_seen(axis_codes[0])) || (code_seen(axis_codes[1])) || (code_seen(axis_codes[2])));
 
@@ -1287,7 +1315,7 @@ void process_commands()
         }
       #endif
       plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-#endif // else DELTA
+}//#endif // else DELTA
 
       #ifdef ENDSTOPS_ONLY_FOR_HOMING
         enable_endstops(false);
@@ -2106,6 +2134,18 @@ void process_commands()
         if(code_seen(axis_codes[i])) add_homeing[i] = code_value();
       }
       break;
+    case 664: //M664 - set Dir Invert      
+      if(code_seen('X')) invertXdir = (code_value()!=0);
+      if(code_seen('X')) invertYdir = (code_value()!=0);
+      if(code_seen('X')) invertZdir = (code_value()!=0);
+      break;
+    case 665: // M665 - set delta options
+      if(code_seen('E')) usedelta = (code_value()!=0);
+      if(code_seen('S')) deltaSegmentsPerSecound = code_value();
+      if(code_seen('D')) deltaDiagonalRod = code_value();
+      if(code_seen('R')) deltaRadius = code_value();
+      calcdelta(); 
+      break;
     case 666: // M666 set delta endstop adjustemnt
       for(int8_t i=0; i < 3; i++)
       {
@@ -2917,20 +2957,20 @@ void clamp_to_software_endstops(float target[3])
   }
 }
 
-#ifdef DELTA
+//#ifdef DELTA
 void calculate_delta(float cartesian[3])
 {
-  delta[X_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(DELTA_TOWER1_X-cartesian[X_AXIS])
-                       - sq(DELTA_TOWER1_Y-cartesian[Y_AXIS])
+  delta[X_AXIS] = sqrt(deltaDiagonalRod2
+                       - sq(deltaTower1_x-cartesian[X_AXIS])
+                       - sq(deltaTower1_y-cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
-  delta[Y_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(DELTA_TOWER2_X-cartesian[X_AXIS])
-                       - sq(DELTA_TOWER2_Y-cartesian[Y_AXIS])
+  delta[Y_AXIS] = sqrt(deltaDiagonalRod2
+                       - sq(deltaTower2_x-cartesian[X_AXIS])
+                       - sq(deltaTower2_y-cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
-  delta[Z_AXIS] = sqrt(DELTA_DIAGONAL_ROD_2
-                       - sq(DELTA_TOWER3_X-cartesian[X_AXIS])
-                       - sq(DELTA_TOWER3_Y-cartesian[Y_AXIS])
+  delta[Z_AXIS] = sqrt(deltaDiagonalRod2
+                       - sq(deltaTower3_x-cartesian[X_AXIS])
+                       - sq(deltaTower3_y-cartesian[Y_AXIS])
                        ) + cartesian[Z_AXIS];
   /*
   SERIAL_ECHOPGM("cartesian x="); SERIAL_ECHO(cartesian[X_AXIS]);
@@ -2942,14 +2982,14 @@ void calculate_delta(float cartesian[3])
   SERIAL_ECHOPGM(" z="); SERIAL_ECHOLN(delta[Z_AXIS]);
   */
 }
-#endif
+//#endif
 
 void prepare_move()
 {
   clamp_to_software_endstops(destination);
 
   previous_millis_cmd = millis();
-#ifdef DELTA
+if(usedelta){//#ifdef DELTA
   float difference[NUM_AXIS];
   for (int8_t i=0; i < NUM_AXIS; i++) {
     difference[i] = destination[i] - current_position[i];
@@ -2960,7 +3000,7 @@ void prepare_move()
   if (cartesian_mm < 0.000001) { cartesian_mm = abs(difference[E_AXIS]); }
   if (cartesian_mm < 0.000001) { return; }
   float seconds = 6000 * cartesian_mm / feedrate / feedmultiply;
-  int steps = max(1, int(DELTA_SEGMENTS_PER_SECOND * seconds));
+  int steps = max(1, int(deltaSegmentsPerSecound * seconds));
   // SERIAL_ECHOPGM("mm="); SERIAL_ECHO(cartesian_mm);
   // SERIAL_ECHOPGM(" seconds="); SERIAL_ECHO(seconds);
   // SERIAL_ECHOPGM(" steps="); SERIAL_ECHOLN(steps);
@@ -2974,8 +3014,7 @@ void prepare_move()
                      destination[E_AXIS], feedrate*feedmultiply/60/100.0,
                      active_extruder);
   }
-#else
-
+}else{//#else
 #ifdef DUAL_X_CARRIAGE
   if (active_extruder_parked)
   {
@@ -3024,7 +3063,7 @@ void prepare_move()
   else {
     plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate*feedmultiply/60/100.0, active_extruder);
   }
-#endif //else DELTA
+}//#endif //else DELTA
   for(int8_t i=0; i < NUM_AXIS; i++) {
     current_position[i] = destination[i];
   }
