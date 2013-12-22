@@ -473,6 +473,7 @@ static void lcd_implementation_status_screen()
     lcd.setCursor(LCD_WIDTH - 8, 1);
     lcd.print('Z');
     lcd.print(ftostr32(current_position[Z_AXIS]));
+    if(usedelta) lcd.print('D');
 #endif//LCD_HEIGHT > 2
 
 #if LCD_HEIGHT > 3
