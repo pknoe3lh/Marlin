@@ -12,6 +12,8 @@ M205 S0.00 T0.00 B20000 X20.00 Z0.40 E5.00
 M206 X0.00 Y0.00 Z0.00
 ;Invert Directions
 M664 X1  Y1  Z0
+;set delta options: E=enable
+M665 E0
 ;PID settings:
 M301 P54.62 I7.38 D101.13
 ;stores paramters in EEPROM
