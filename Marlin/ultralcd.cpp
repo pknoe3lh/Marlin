@@ -99,7 +99,9 @@ static void menu_action_setting_edit_callback_long5(const char* pstr, unsigned l
     #define ENCODER_PULSES_PER_STEP 1
   #endif
 #else
-  #define ENCODER_STEPS_PER_MENU_ITEM 2 // VIKI LCD rotary encoder uses a different number of steps per rotation
+  #ifndef ENCODER_STEPS_PER_MENU_ITEM
+    #define ENCODER_STEPS_PER_MENU_ITEM 2 // VIKI LCD rotary encoder uses a different number of steps per rotation
+  #endif
   #ifndef ENCODER_PULSES_PER_STEP
     #define ENCODER_PULSES_PER_STEP 1
   #endif
@@ -216,7 +218,7 @@ static void lcd_status_screen()
     else if (feedmultiply == 100 && int(encoderPosition) < -ENCODER_FEEDRATE_DEADZONE)
     {
         feedmultiply += int(encoderPosition) + ENCODER_FEEDRATE_DEADZONE;
-        encoderPosition = 0;	
+        encoderPosition = 0;
     }
     else if (feedmultiply != 100)
     {
@@ -420,7 +422,7 @@ static void lcd_tune_menu()
 #endif
     MENU_ITEM_EDIT(int3, MSG_FAN_SPEED, &fanSpeed, 0, 255);
     MENU_ITEM_EDIT(int3, MSG_FLOW, &extrudemultiply, 10, 999);
-    
+
 #ifdef BABYSTEPPING
     #ifdef BABYSTEP_XY
       MENU_ITEM(submenu, "Babystep X", lcd_babystep_x);
@@ -732,7 +734,7 @@ static void lcd_control_motion_menu()
     MENU_ITEM_EDIT(float52, MSG_XSTEPS, &axis_steps_per_unit[X_AXIS], 5, 9999);
     MENU_ITEM_EDIT(float52, MSG_YSTEPS, &axis_steps_per_unit[Y_AXIS], 5, 9999);
     MENU_ITEM_EDIT(float51, MSG_ZSTEPS, &axis_steps_per_unit[Z_AXIS], 5, 9999);
-    MENU_ITEM_EDIT(float51, MSG_ESTEPS, &axis_steps_per_unit[E_AXIS], 5, 9999);    
+    MENU_ITEM_EDIT(float51, MSG_ESTEPS, &axis_steps_per_unit[E_AXIS], 5, 9999);
 #ifdef ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
     MENU_ITEM_EDIT(bool, "Endstop abort", &abort_on_endstop_hit);
 #endif
@@ -794,7 +796,7 @@ static void lcd_sd_updir()
 
 void lcd_sdcard_menu()
 {
-    if (lcdDrawUpdate == 0 && LCD_CLICKED == 0) 
+    if (lcdDrawUpdate == 0 && LCD_CLICKED == 0)
         return;	// nothing to do (so don't thrash the SD card)
     uint16_t fileCnt = card.getnrfilenames();
     START_MENU();
@@ -808,7 +810,7 @@ void lcd_sdcard_menu()
     }else{
         MENU_ITEM(function, LCD_STR_FOLDER "..", lcd_sd_updir);
     }
-    
+
     for(uint16_t i=0;i<fileCnt;i++)
     {
         if (_menuItemNr == _lineNr)
@@ -995,14 +997,14 @@ void lcd_init()
                   
 #ifdef NEWPANEL
     pinMode(BTN_EN1,INPUT);
-    pinMode(BTN_EN2,INPUT); 
+    pinMode(BTN_EN2,INPUT);
     pinMode(SDCARDDETECT,INPUT);
     WRITE(BTN_EN1,HIGH);
     WRITE(BTN_EN2,HIGH);
   #if BTN_ENC > 0
-    pinMode(BTN_ENC,INPUT); 
+    pinMode(BTN_ENC,INPUT);
     WRITE(BTN_ENC,HIGH);
-  #endif    
+  #endif
   #ifdef REPRAPWORLD_KEYPAD
     pinMode(SHIFT_CLK,OUTPUT);
     pinMode(SHIFT_LD,OUTPUT);
@@ -1020,9 +1022,9 @@ void lcd_init()
      pinMode(SHIFT_EN,OUTPUT);
      pinMode(SHIFT_OUT,INPUT);
      WRITE(SHIFT_OUT,HIGH);
-     WRITE(SHIFT_LD,HIGH); 
+     WRITE(SHIFT_LD,HIGH);
      WRITE(SHIFT_EN,LOW);
-   #endif // SR_LCD_2W_NL    
+   #endif // SR_LCD_2W_NL
 #endif//!NEWPANEL
 
 #if (SDCARDDETECT > 0)
@@ -1033,7 +1035,7 @@ void lcd_init()
     slow_buttons = 0;
     #endif
     lcd_buttons_update();
-#ifdef ULTIPANEL    
+#ifdef ULTIPANEL
     encoderDiff = 0;
 #endif 
 
@@ -1060,20 +1062,20 @@ void lcd_init()
 void lcd_update()
 {
     static unsigned long timeoutToStatus = 0;
-    
+
     #ifdef LCD_HAS_SLOW_BUTTONS
     slow_buttons = lcd_implementation_read_slow_buttons(); // buttons which take too long to read in interrupt context
     #endif
-    
+
     lcd_buttons_update();
-    
+
     #if (SDCARDDETECT > 0)
     if((IS_SD_INSERTED != lcd_oldcardstatus))
     {
         lcdDrawUpdate = 2;
         lcd_oldcardstatus = IS_SD_INSERTED;
         lcd_implementation_init(); // to maybe revive the lcd if static electricty killed it.
-        
+
         if(lcd_oldcardstatus)
         {
             card.initsd();
@@ -1086,7 +1088,7 @@ void lcd_update()
         }
     }
     #endif//CARDINSERTED
-    
+
     if (lcd_next_update_millis < millis())
     {
 #ifdef ULTIPANEL
@@ -1131,7 +1133,7 @@ void lcd_update()
 #ifdef DOGLCD        // Changes due to different driver architecture of the DOGM display
         blink++;     // Variable for fan animation and alive dot
         u8g.firstPage();
-        do 
+        do
         {
             u8g.setFont(u8g_font_6x10_marlin);
             u8g.setPrintPos(125,0);
@@ -1141,7 +1143,7 @@ void lcd_update()
             (*currentMenu)();
             if (!lcdDrawUpdate)  break; // Terminate display update, when nothing new to draw. This must be done before the last dogm.next()
         } while( u8g.nextPage() );
-#else        
+#else
         (*currentMenu)();
 #endif
 
@@ -1276,7 +1278,7 @@ void lcd_reset_alert_level()
 void lcd_setcontrast(uint8_t value)
 {
     lcd_contrast = value & 63;
-    u8g.setContrast(lcd_contrast);	
+    u8g.setContrast(lcd_contrast);
 }
 #endif
 
@@ -1416,7 +1418,6 @@ void lcd_buttons_update()
             
     #endif
     
-    
         }
         lastEncoderBits = enc;
         
@@ -1539,14 +1540,14 @@ void lcd_buttons_update()
 }
 
 void lcd_buzz(long duration, uint16_t freq)
-{ 
+{
 #ifdef LCD_USE_I2C_BUZZER
   lcd.buzz(duration,freq);
-#endif   
+#endif
 }
 
-bool lcd_clicked() 
-{ 
+bool lcd_clicked()
+{
   return LCD_CLICKED;
 }
 #endif//ULTIPANEL
