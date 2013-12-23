@@ -142,6 +142,7 @@ void Config_PrintSettings()
 {  // Always have this function, even with EEPROM_SETTINGS disabled, the current values will be shown
     SERIAL_ECHO_START;
     SERIAL_ECHOPAIR("Show Settings for ",(long unsigned int)N());
+    SERIAL_ECHOLN("");
 
     SERIAL_ECHO_START;
     SERIAL_ECHOLNPGM("Steps per unit:");
@@ -276,15 +277,19 @@ void Config_RetrieveSettings()
     switch(N())
     {
       case 0:
-        LCD_MESSAGEPGM("Mendel OK");
+        SERIAL_ECHOLN(": MENDLE!");
+        LCD_MESSAGEPGM("MENDLE OK");
         break;
       case 1:
+        SERIAL_ECHOLN(": PROXXON!");
         LCD_MESSAGEPGM("PROXXON OK");
         break;
       case 2:
+        SERIAL_ECHOLN(": DELVIEN!");
         LCD_MESSAGEPGM("DELVIEN OK");
         break;
       case 3:
+        SERIAL_ECHOLN(": NULL!");
         LCD_MESSAGEPGM("NULL OK");
         break;
     }
