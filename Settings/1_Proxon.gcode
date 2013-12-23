@@ -12,7 +12,5 @@ M205 S0.00 T0.00 B20000 X0.5 Z0.50
 M206 X0.00 Y0.00 Z0.00
 ;Invert Directions
 M664 X1  Y1  Z0
-;set delta options: E=enable
-M665 E0
 ;stores paramters in EEPROM
 M500

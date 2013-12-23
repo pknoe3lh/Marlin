@@ -11,9 +11,9 @@ M205 S0.00 T0.00 B20000 X20.00 Z20.00 E5.00
 ;Home offset (mm):
 M206 X0.00 Y0.00 Z0.00
 ;Invert Directions
-M664 X1  Y1  Z0
+M664 X0  Y0  Z0
 ;set delta options: E=enable, S=Segments per Secounds, D=DiagonalRod, R=Radius
-M665 E0.00 S200.00 D250.00 R124.00
+M665 E1 S200.00 D250.00 R124.00
 ;Endstop adjustement (mm):
 M666 X0.00 Y0.00 Z0.00
 ;PID settings:
