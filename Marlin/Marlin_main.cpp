@@ -997,7 +997,7 @@ static void homeaxis(int axis) {
     #endif
 
     destination[axis] = 1.5 * max_length(axis) * axis_home_dir;
-    feedrate = homing_feedrate[axis];
+    feedrate = homing_feedrate[usedelta?X_AXIS:axis];
     plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
     st_synchronize();
 
@@ -2140,8 +2140,8 @@ if(usedelta){//#ifdef DELTA
       break;
     case 664: //M664 - set Dir Invert      
       if(code_seen('X')) invertXdir = (code_value()!=0);
-      if(code_seen('X')) invertYdir = (code_value()!=0);
-      if(code_seen('X')) invertZdir = (code_value()!=0);
+      if(code_seen('Y')) invertYdir = (code_value()!=0);
+      if(code_seen('Z')) invertZdir = (code_value()!=0);
       break;
     case 665: // M665 - set delta options
       if(code_seen('E')) usedelta = (code_value()!=0);
