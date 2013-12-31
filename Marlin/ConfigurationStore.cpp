@@ -41,9 +41,6 @@ static int N()
 
 
 
-#define EEPROM_OFFSET 0
-
-
 // IMPORTANT:  Whenever there are changes made to the variables stored in EEPROM
 // in the functions below, also increment the version number. This makes sure that
 // the default values are used whenever there is a change to the data, to prevent
@@ -345,7 +342,7 @@ void Config_RetrieveSettings()
     #endif
 }
 #endif
-
+             
 
 
 
