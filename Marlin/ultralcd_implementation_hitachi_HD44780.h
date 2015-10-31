@@ -189,7 +189,7 @@ extern volatile uint16_t buttons;  //an extended version of the last checked but
   LCD_CLASS lcd(SR_DATA_PIN, SR_CLK_PIN);
 
 #elif defined(USE_LIQUIDCRYSTALFAST) 
-  #include <LiquidCrystalFast.h>
+  #include "LiquidCrystalFast.h"
   #define LCD_CLASS LiquidCrystalFast
   LCD_CLASS lcd(LCD_PINS_RS, LCD_PINS_RW, LCD_PINS_ENABLE, LCD_PINS_D4, LCD_PINS_D5,LCD_PINS_D6,LCD_PINS_D7);  // LCD pins: RS  RW  EN  D4 D5 D6 D7
 #else 
