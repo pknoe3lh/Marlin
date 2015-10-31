@@ -3194,7 +3194,8 @@ void manage_inactivity()
     controllerFan(); //Check if fan should be turned on to cool stepper drivers down
   #endif
   #ifdef EXTRUDER_RUNOUT_PREVENT
-    if( (millis() - previous_millis_cmd) >  EXTRUDER_RUNOUT_SECONDS*1000 )
+	if(!(movesplanned() || IS_SD_PRINTING))
+	if( (millis() - previous_millis_cmd) >  EXTRUDER_RUNOUT_SECONDS*1000 )
     if(degHotend(active_extruder)>EXTRUDER_RUNOUT_MINTEMP)
     {
      bool oldstatus=READ(E0_ENABLE_PIN);
@@ -3210,7 +3211,7 @@ void manage_inactivity()
      previous_millis_cmd=millis();
      st_synchronize();
      WRITE(E0_ENABLE_PIN,oldstatus);
-    }
+ 	}
   #endif
   #if defined(DUAL_X_CARRIAGE)
     // handle delayed move timeout
