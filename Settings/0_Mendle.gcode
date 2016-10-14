@@ -15,6 +15,6 @@ M664 X1  Y1  Z0
 ;set delta options: E=enable
 M665 E0
 ;PID settings:
-M301 P54.62 I7.38 D101.13
+M301 P30.00 I3.00 D40.00
 ;stores paramters in EEPROM
 M500
